@@ -1,20 +1,26 @@
 ﻿using demo_app.Repository;
 using demo_app.Models;
 using Microsoft.AspNetCore.Mvc;
+using demo_app.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace demo_app.Controllers
 {
     public class TodoController : Controller
     {
         private readonly TodoRepository _repository;
-        public TodoController() 
+        private readonly TodoContext _context;
+
+        public TodoController(TodoContext context) 
         {
             _repository = new TodoRepository();
+            _context = context;
         }
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            var items = _repository.GetAll();
+            var items = await _context.Todos.ToListAsync();
             return View(items);
+
         }
 
         [HttpPost]
@@ -22,7 +28,8 @@ namespace demo_app.Controllers
         {
             if (ModelState.IsValid)
             {
-                _repository.Add(item);
+                _context.Todos.Add(item);
+                _context.SaveChanges();
                 return RedirectToAction(nameof(Index));
             }
             return View(item);
@@ -31,7 +38,12 @@ namespace demo_app.Controllers
         [HttpPost]
         public IActionResult Delete(int id)
         {
-            _repository.Delete(id);
+            var todo = _context.Todos.Find(id);
+            if (todo != null)
+            {
+                _context.Todos.Remove(todo);
+                _context.SaveChanges();
+            }
             return RedirectToAction(nameof(Index));
         }
     }
